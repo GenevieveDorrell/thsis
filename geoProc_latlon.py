@@ -2,9 +2,7 @@ import rasterio as rs
 
 from typing import List
 import numpy
-import time
-
-
+from sklearn.preprocessing import normalize
 from pyproj import Transformer, CRS
 
 
@@ -20,7 +18,7 @@ rgb1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_l8_re
 sev2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_20140706_dnbr6.tif"
 rgb2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_l8_refl.tif"
 
-
+num_test_casses = 300
 #open tiffs
 def open_tiffs(fps: List[str]):
     """
@@ -46,7 +44,7 @@ def get_arrays_from_dnbr6(severity_array: "numpy", rgb_array: "numpy"):
     row_col = []
     for i in range(len(severity_array[0])):
         for j in range(len(severity_array[0][0])):
-            if severity_array[0][i][j] != 0 and severity_array[0][i][j] < 6:
+            if severity_array[0][i][j] != 0 and severity_array[0][i][j] < 5:
                 sev.append(severity_array[0][i][j]-1)
                 row_col.append((i,j))
                 vals = []
@@ -73,11 +71,13 @@ def close_tiffs(tiff_objs: List):
     
 
 
-def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], data_fps: List[str]):
+def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], 
+                            data_fps: List[str], to_normailze=True):
     """
     puts lables and pixel data from tiffs into numpy arrays
     """
     #declare stuff once
+    print("opening tiffs")
     severity_data, sev_objs  = open_tiffs(severity_fps)
     rgb_data, throw_away = open_tiffs(rgbs_fps)
     tiff_data, tiff_objs = open_tiffs(data_fps)
@@ -87,6 +87,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], data_fps:
 
     #get data based on current sev location and transformations
     for i in range(len(sev_objs)):
+        print(f"Getting data for severity tiff {i}")
         sev_obj = sev_objs[i]
         #loop through once to get row_col values and rgbs
         sev, rgbs, row_col = get_arrays_from_dnbr6(severity_data[i], rgb_data[i])
@@ -98,7 +99,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], data_fps:
                 lon2, lat2 = transformers[tiff].transform(lon, lat)
                 row2, col2 = tiff_objs[tiff].index(lat2, lon2)
                 for k in range(len(tiff_data[tiff])):
-                    rgbs[j].append(tiff_data[tiff][k][row2][col2])
+                    rgbs[j].append(tiff_data[tiff][k][row2][col2])            
            
         lables += sev
         data += rgbs
@@ -106,27 +107,45 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], data_fps:
     close_tiffs(sev_objs)
     close_tiffs(throw_away)
     close_tiffs(tiff_objs)
-    print("calculating test cases")
-    test_lables = []
-    test_data = []
-    catgories = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-    for i in range(len(lables)-250):
-        if catgories[lables[i]] < 50:
-            catgories[lables[i]] += 1
-            test_data.append(data[i])
-            test_lables.append(lables[i])
-            data.pop(i)
-            lables.pop(i)
-            i -= 1
-            
+
+    
+    if to_normailze:        
+        print("normaizing data")
+        data = normalize(data, axis=0, norm='max')
+
+    print("balacing data and calculating test cases")
+
+    #sort into dict
+    catgories = {0: [], 1: [], 2: [], 3: []}
+    for i in range(len(lables)):
+        catgories[lables[i]].append(data[i])
 
 
-    severity = numpy.array(lables)
-    all_data = numpy.array(data)
-    test_severity = numpy.array(test_lables)
-    test_all_data = numpy.array(test_data)
+    # find labble with smallest num of samples
+    min_catagorie = 0
+    for key in catgories.keys():
+        in_catagorie =  len(catgories[key])
+        if in_catagorie < min_catagorie or min_catagorie == 0:
+            min_catagorie = in_catagorie
 
-    print(catgories)
+    balanced_lables = []
+    balanced_data = []
+    b_test_lables = []
+    b_test_data = []
+
+    #create balanced dataset and testset
+    num_in_catagories = min_catagorie - num_test_casses
+    for key in catgories.keys():
+        balanced_data += catgories[key][:num_in_catagories]
+        b_test_data += catgories[key][-num_test_casses:]
+        balanced_lables += [key]*num_in_catagories
+        b_test_lables += [key]*num_test_casses
+
+    severity = numpy.array(balanced_lables)
+    all_data = numpy.array(balanced_data)
+    test_severity = numpy.array(b_test_lables)
+    test_all_data = numpy.array(b_test_data)
+
 
     return severity, test_severity, all_data, test_all_data
 
