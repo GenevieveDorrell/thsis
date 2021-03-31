@@ -44,7 +44,8 @@ rgb4_fp = "data\\2018\or4252812357120180715\or4252812357120180715_20180701_L8_re
 #other fire
 sev5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_20140706_dnbr6.tif"
 rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_refl.tif"
-y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
+#y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
+
 y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev5_fp],
                                                         [rgb1_fp, rgb2_fp, rgb5_fp], 
                                                         [treecover, lossyear, slope, elevation])
@@ -54,7 +55,8 @@ print(y_train.shape)
 print(y_test.shape)
 print(x_train.shape)
 print(x_test.shape)
-input_length = x_train.shape[2]
+input_length = x_train.shape[3]
+input_size = x_train.shape[2]
 num_classes = 4
 num_epochs = 10
 
@@ -82,7 +84,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.batch_size = batch_size
         # input [batch_size x 1 x 28 x 28], 10 output nodes, 3x3 kernel
-        self.conv1 = nn.Conv2d(1, 10, 4)
+        self.conv1 = nn.Conv2d(input_size, 10, 4)
         self.conv2 = nn.Conv2d(10, 20, 3)
         # an affine operation: y = Wx + b
         self.fc1 = nn.Linear(10 * 3 * 4, self.batch_size)
@@ -115,7 +117,7 @@ for epoch in range(num_epochs):
     running_loss = 0
     for i, (feats, labels) in enumerate(train_loader):
         if feats.shape[0] == batch_size:
-            feats = feats.view([batch_size, 1, 9, input_length])
+            feats = feats.view([batch_size, input_size, input_size, input_length])
 
             optimizer.zero_grad()
 
@@ -140,7 +142,7 @@ with torch.no_grad():
     catagories = [[0,0],[0,0],[0,0],[0,0], [0,0]]
     for i, (test, labels) in enumerate(test_loader):
         if test.shape[0] == batch_size:
-            test = test.view([batch_size, 1, 9, input_length])
+            test = test.view([batch_size, input_size, input_size, input_length])
 
             test_out = net(test)
             pred = torch.max(test_out, 1)[1]

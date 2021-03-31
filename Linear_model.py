@@ -42,7 +42,7 @@ rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_re
 
 y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev3_fp, sev4_fp, sev5_fp],
                                                         [rgb1_fp, rgb2_fp, rgb3_fp, rgb4_fp, rgb5_fp], 
-                                                        [treecover, lossyear, slope])
+                                                        [treecover])#, lossyear, slope, elevation])
 #y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
 
 print(y_train.shape)
@@ -52,8 +52,6 @@ print(x_test.shape)
 input_length = x_train.shape[1]
 num_classes = 4
 
-mean = x_train.mean()
-std = x_train.std()
 
 
 train_data = TensorDataset(torch.tensor(x_train, dtype=torch.float), 
@@ -65,6 +63,7 @@ test_data = TensorDataset(torch.tensor(x_test, dtype=torch.float),
 torch.manual_seed(42)
 
 batch_size = 100
+num_epochs = 5
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
@@ -83,8 +82,9 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(input_length, self.batch_size)
         self.fc2 = nn.Linear(self.batch_size, 128)
         self.fc3 = nn.Linear(128, 256)
-        self.fc4 = nn.Linear(256, num_classes)
-        #self.fc6 = nn.Softmax(dim=1)      # 5 output nodes
+        self.fc4 = nn.Linear(256, 512)
+        self.fc5 = nn.Linear(512, num_classes)
+        #self.fc6 = nn.Softmax(dim=1)      # 4 output nodes
     
     def forward(self, x):
         #print(x.size()[1:])
@@ -93,8 +93,8 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        x = self.fc4(x) # softmax
-        #x = self.fc6(x) 
+        x = F.relu(self.fc4(x)) # softmax
+        x = self.fc5(x) 
         return x
 
 #batchNormalization
@@ -107,7 +107,7 @@ optimizer = torch.optim.SGD(net.parameters(), lr=0.00001, momentum=0.9)
 
 # Training model on data
 start = time.time()
-for epoch in range(10):
+for epoch in range(num_epochs):
     print("\nEpoch", epoch+1)
     running_loss = 0
     for i, (feats, labels) in enumerate(train_loader):
