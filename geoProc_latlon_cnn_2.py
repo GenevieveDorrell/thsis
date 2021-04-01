@@ -117,7 +117,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
                     rgbs[key].append(tiff_data[tiff][k][row2][col2])            
 
         #get surrounding data points
-        dir_vecs = gen_dir_vecs(2)       
+        dir_vecs = gen_dir_vecs(1)       
         
         
         for key in rgbs.keys():

@@ -48,7 +48,7 @@ rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_re
 
 y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev5_fp],
                                                         [rgb1_fp, rgb2_fp, rgb5_fp], 
-                                                        [treecover, lossyear, slope, elevation])
+                                                        [treecover, lossyear, slope, elevation],False)
 
 
 print(y_train.shape)
@@ -84,10 +84,10 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.batch_size = batch_size
         # input [batch_size x 1 x 28 x 28], 10 output nodes, 3x3 kernel
-        self.conv1 = nn.Conv2d(input_size, 10, 4)
-        self.conv2 = nn.Conv2d(10, 20, 3)
+        self.conv1 = nn.Conv2d(input_size, 10, 3)
+        #self.conv2 = nn.Conv2d(15, 30, 1)
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(10 * 3 * 4, self.batch_size)
+        self.fc1 = nn.Linear(10 * 5, self.batch_size)
         self.fc2 = nn.Linear(self.batch_size, 128)
         self.fc3 = nn.Linear(128, num_classes)     # 4 output nodes
     
