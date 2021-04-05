@@ -5,19 +5,7 @@ import numpy
 from sklearn.preprocessing import normalize
 from pyproj import Transformer, CRS
 from random import randint
-
-
-#
-lossyear = "data\\2013\Hansen_GFC2013_lossyear_50N_130W.tif"
-treecover = "data\\2013\Hansen_GFC-2019-v1.7_treecover2000_50N_130W.tif"
-
-#file paths for bigger fire
-sev1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_20140706_dnbr6.tif"
-rgb1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_l8_refl.tif"
-
-#file paths for smaller fire
-sev2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_20140706_dnbr6.tif"
-rgb2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_l8_refl.tif"
+import pandas as pd
 
 num_test_casses = 300
 #open tiffs
@@ -84,11 +72,30 @@ def declare_transformation_objs(sev_obj, tiff_objs: List):
 def close_tiffs(tiff_objs: List):
     for tiff in tiff_objs:
         tiff.close()
+
+def normalize_tiffs(tiff_data, min_max: bool=False, mean_sdt: bool=True):
+    if min_max:
+        for i in range(len(tiff_data)):
+            tiff = tiff_data[i]
+            tiff = tiff - tiff.min()
+            denominator = tiff.max()-tiff.min()
+            tiff_data[i] = tiff / denominator
+    if mean_sdt:
+         for i in range(len(tiff_data)):
+            tiff = tiff_data[i]
+            mean = tiff.mean(axis=(0,1), keepdims=True)
+            std = tiff.std(axis=(0,1), keepdims=True)
+            tiff = tiff - mean
+            tiff_data[i] = tiff / std
+
+def make_csv(name: str, numpy_data):
+    df = pd.DataFrame(numpy_data)
+    df.to_csv(name + '.csv', index = False)
     
 
 
 def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str], 
-                            data_fps: List[str], to_normailze=True):
+                            data_fps: List[str], to_normailze=True, make_csvs = True):
     """
     puts lables and pixel data from tiffs into numpy arrays
     """
@@ -97,6 +104,10 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
     severity_data, sev_objs  = open_tiffs(severity_fps)
     rgb_data, throw_away = open_tiffs(rgbs_fps)
     tiff_data, tiff_objs = open_tiffs(data_fps)
+
+    if to_normailze:
+        normalize_tiffs(rgb_data)
+        normalize_tiffs(tiff_data)
 
     lables = []
     data = []
@@ -117,7 +128,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
                     rgbs[key].append(tiff_data[tiff][k][row2][col2])            
 
         #get surrounding data points
-        dir_vecs = gen_dir_vecs(1)       
+        dir_vecs = gen_dir_vecs(2)       
         
         
         for key in rgbs.keys():
@@ -141,24 +152,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
     
     close_tiffs(sev_objs)
     close_tiffs(throw_away)
-    close_tiffs(tiff_objs)
-
-
-
-    if to_normailze:        
-        print("normaizing data")
-        data = numpy.array(data)
-        print(data.shape)
-        x_max = data.mean(axis=(0,1), keepdims=True)
-        x_min = data.std(axis=(0,1), keepdims=True)
-        denomintor = x_min
-        for val in range(len(denomintor[0][0])):
-            if val == 0:
-                denomintor[0][0] = 1
-        data = (data - x_min)/denomintor
-
-        
-    
+    close_tiffs(tiff_objs)    
     
     print("balacing data and calculating test cases")
 
@@ -189,24 +183,59 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
         b_test_data += catgories[key][-num_test_casses:]
         balanced_lables += [key]*num_in_catagories
         b_test_lables += [key]*num_test_casses
+    
+    
+    balanced_lables = numpy.array(balanced_lables)
+    balanced_data = numpy.array(balanced_data)
+    b_test_lables = numpy.array(b_test_lables)
+    b_test_data = numpy.array(b_test_data)
+    if make_csvs:
+        make_csv('balanced-severity-y_test', b_test_lables)
+        shape = b_test_data.shape
+        print(shape)
+        b_test_data = b_test_data.reshape(num_test_casses*4,shape[1]*shape[2]*shape[3])#4 bc that is the number of catagories
+        make_csv('balanced-severity-x_test', b_test_data)
+        make_csv('balanced-severity-y_training', balanced_lables)
+        balanced_data = balanced_data.reshape(num_in_catagories*4,shape[1]*shape[2]*shape[3])
+        make_csv('balanced-severity-x_training', balanced_data)
 
-    severity = numpy.array(balanced_lables)
-    all_data = numpy.array(balanced_data)
-    test_severity = numpy.array(b_test_lables)
-    test_all_data = numpy.array(b_test_data)
-
-
-    return severity, test_severity, all_data, test_all_data
+    return balanced_lables, b_test_lables, balanced_data, b_test_data
 
 
 
 if __name__ == "__main__":
 
 
-    lables, data = get_numpy_from_tiffs([sev1_fp, sev2_fp],[rgb1_fp, rgb2_fp], [treecover, lossyear])
-    print(data.shape)
-    print(lables.shape)
+    #geo data
+    lossyear = "data\\2013\Hansen_GFC2013_lossyear_50N_130W.tif"
+    treecover = "data\\2013\Hansen_GFC-2019-v1.7_treecover2000_50N_130W.tif"
+    elevation = "data\\2013\\USGS_13_n43w124.tif"
+    slope = "data\\2013\slope2.tif"
 
+    #file paths for bigger fire
+    sev1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_20140706_dnbr6.tif"
+    rgb1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_l8_refl.tif"
+
+    #file paths for smaller fire
+    sev2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_20140706_dnbr6.tif"
+    rgb2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_l8_refl.tif"
+
+    #mill fire
+    sev3_fp = "data\\2017\or4293912360020170827\or4293912360020170827_20170714_20180717_dnbr6.tif"
+    rgb3_fp = "data\\2017\or4293912360020170827\or4293912360020170827_20170714_l8_refl.tif"
+
+    #big windy complex
+    sev4_fp = "data\\2018\or4252812357120180715\or4252812357120180715_20180701_20190720_dnbr6.tif"
+    rgb4_fp = "data\\2018\or4252812357120180715\or4252812357120180715_20180701_L8_refl.tif"
+
+    #other fire
+    sev5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_20140706_dnbr6.tif"
+    rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_refl.tif"
+    #y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
+
+    y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev5_fp],
+                                                            [rgb1_fp, rgb2_fp, rgb5_fp], 
+                                                            [treecover, lossyear, slope],False)
 
 
 

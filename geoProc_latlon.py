@@ -152,6 +152,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
 
 
 if __name__ == "__main__":
+    
 
 
     lables, data = get_numpy_from_tiffs([sev1_fp, sev2_fp],[rgb1_fp, rgb2_fp], [treecover, lossyear])
