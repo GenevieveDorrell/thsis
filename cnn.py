@@ -7,9 +7,6 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
 
-
-from geoProc_latlon_cnn import get_numpy_from_tiffs
-
 """
 no normalization no slope
 Accuracy:  27.333333333333332
@@ -35,13 +32,12 @@ y_test = pd.DataFrame.to_numpy(y_test.iloc[:,0])
 
 
 print(y_train.shape)
-print(y_test[299])
 print(y_test.shape)
 print(x_train.shape)
 print(x_test.shape)
 #print(x_test[0])
 num_classes = 4
-input_length = int(x_test.shape[1]/9)
+input_length = 12
 num_classes = 4
 num_epochs = 10
 
@@ -68,8 +64,8 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.batch_size = batch_size
         # input [batch_size x 1 x 28 x 28], 10 output nodes, 3x3 kernel
-        self.conv1 = nn.Conv2d(1, 10, 4)
-        self.conv2 = nn.Conv2d(10, 20, 3)
+        self.conv1 = nn.Conv3d(1, 30, 5)
+        self.conv2 = nn.Conv3d(10, 20, 3)
         # an affine operation: y = Wx + b
         self.fc1 = nn.Linear(10 * 3 * 4, self.batch_size)
         self.fc2 = nn.Linear(self.batch_size, 128)
@@ -77,7 +73,10 @@ class Net(nn.Module):
     
     def forward(self, x):
         # Max pooling over a (2, 2) window
-        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        x = F.relu(self.conv1(x))
+        print(x.shape)
+        x = F.max_pool2d(x, (2, 2))
+        print(x.shape)
         #x = F.max_pool2d(F.relu(self.conv2(x)), (2, 2))
         #print(x.shape)
         x = x.view(self.batch_size, -1)
@@ -101,7 +100,7 @@ for epoch in range(num_epochs):
     running_loss = 0
     for i, (feats, labels) in enumerate(train_loader):
         if feats.shape[0] == batch_size:
-            feats = feats.view([batch_size, 1, 9, input_length])
+            feats = feats.view([batch_size, 1, 5, 5, input_length])
 
             optimizer.zero_grad()
 

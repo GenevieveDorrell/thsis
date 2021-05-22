@@ -101,10 +101,10 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
         for key in rgbs.keys():
             lon, lat = sev_obj.xy(key[0],key[1])
             for tiff in range(len(tiff_objs)):
-                
                 lon2, lat2 = transformers[tiff].transform(lon, lat)
                 row2, col2 = tiff_objs[tiff].index(lat2, lon2)
                 for k in range(len(tiff_data[tiff])):
+                    print()
                     rgbs[key].append(tiff_data[tiff][k][row2][col2])            
 
         #get surrounding data points
@@ -191,6 +191,7 @@ if __name__ == "__main__":
     treecover = "data\\2013\Hansen_GFC-2019-v1.7_treecover2000_50N_130W.tif"
     elevation = "data\\2013\\USGS_13_n43w124.tif"
     slope = "data\\2013\slope2.tif"
+    stream_distance = "data\\2013\streams.tif"
 
     #file paths for bigger fire
     sev1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_20140706_dnbr6.tif"
@@ -215,7 +216,7 @@ if __name__ == "__main__":
 
     y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev5_fp],
                                                             [rgb1_fp, rgb2_fp, rgb5_fp], 
-                                                            [treecover, lossyear, slope, elevation],False)
+                                                            [treecover, lossyear, slope, elevation, stream_distance],False)
 
 
 

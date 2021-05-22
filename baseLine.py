@@ -11,6 +11,7 @@ Logistic Regression score: 25.0%
 Decision Tree score: 26.08%
 Random Forest score: 27.25%
 """
+"""
 #geo data
 lossyear = "data\\2013\Hansen_GFC2013_lossyear_50N_130W.tif"
 treecover = "data\\2013\Hansen_GFC-2019-v1.7_treecover2000_50N_130W.tif"
@@ -40,6 +41,19 @@ rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_re
 
 y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev3_fp, sev4_fp, sev5_fp],[rgb1_fp, rgb2_fp, rgb3_fp, rgb4_fp, rgb5_fp], [treecover, lossyear, elevation, slope])
 #y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
+"""
+#get data from csvs
+dif = "everything_2_"
+x_train = pd.read_csv(dif + 'balanced-severity-x_training.csv',header=0)
+y_train = pd.read_csv(dif + 'balanced-severity-y_training.csv',header=0)
+x_train = pd.DataFrame.to_numpy(x_train)
+y_train = pd.DataFrame.to_numpy(y_train.iloc[:,0])
+
+
+x_test = pd.read_csv(dif + 'balanced-severity-x_test.csv',header=0)
+y_test = pd.read_csv(dif + 'balanced-severity-y_test.csv',header=0)
+x_test = pd.DataFrame.to_numpy(x_test)
+y_test = pd.DataFrame.to_numpy(y_test.iloc[:,0])
 
 print(y_train.shape)
 print(y_test.shape)

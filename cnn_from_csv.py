@@ -6,20 +6,25 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
-
-
-x_train = pd.read_csv('balanced-severity-x_training.csv',header=0)
-y_train = pd.read_csv('balanced-severity-y_training.csv',header=0)
+import matplotlib.pyplot as plt
+"""
+5 epochs = 37.5
+"""
+#get data from csvs
+dif = "everything_2_"
+x_train = pd.read_csv(dif + 'balanced-severity-x_training.csv',header=0)
+y_train = pd.read_csv(dif + 'balanced-severity-y_training.csv',header=0)
 x_train = pd.DataFrame.to_numpy(x_train)
 y_train = pd.DataFrame.to_numpy(y_train.iloc[:,0])
 
 
-x_test = pd.read_csv('balanced-severity-x_test.csv',header=0)
-y_test = pd.read_csv('balanced-severity-y_test.csv',header=0)
+x_test = pd.read_csv(dif + 'balanced-severity-x_test.csv',header=0)
+y_test = pd.read_csv(dif + 'balanced-severity-y_test.csv',header=0)
 x_test = pd.DataFrame.to_numpy(x_test)
 y_test = pd.DataFrame.to_numpy(y_test.iloc[:,0])
 print(x_test.shape)
 
+#global variables
 num_classes = 4
 input_length = x_test.shape[1]
 train_data = TensorDataset(torch.tensor(x_train, dtype=torch.float), 
@@ -31,30 +36,42 @@ torch.manual_seed(42)
 batch_size = 100
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
-
+#pritn sixe of x after every layer
 # Building CNN model
 # Building CNN model
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.batch_size = batch_size
-        # input [100, 1, 9, 11], 10 output nodes, 3x3 kernel
+        # input [100, 1, 99], 10 output nodes, 3x3 kernel
+        self.norm1 = nn.BatchNorm1d(1)
+
         self.conv1 = nn.Conv1d(1, 20, 3)
+        
         self.conv2 = nn.Conv1d(20, 40, 3)
+        self.conv3 = nn.Conv1d(40, 80, 3)
+        self.norm2 = nn.BatchNorm1d(40)
+        #nn.ConvTranspose1d(in_channels, out_channels, kernel_size)
+        
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(2680, self.batch_size)
-        self.fc2 = nn.Linear(self.batch_size, 128)
-        self.fc3 = nn.Linear(128, num_classes)     # 10 output nodes
+        self.fc1 = nn.Linear(3840, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 256)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, num_classes)     # 4 output nodes #soft max
     
     def forward(self, x):
-        # Max pooling over a (2, 2) window
-
+        # Max pooling over a (2, 2) window    
+    
         x = F.max_pool1d(F.relu(self.conv1(x)), 2)
         x = F.max_pool1d(F.relu(self.conv2(x)), 2)
+        x = F.max_pool1d(F.relu(self.conv3(x)), 2)
         x = x.view(self.batch_size, -1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = F.softmax(self.fc5(x),dim=1)
         return x
 
 # Initializing model, loss function, and optimizer
@@ -62,31 +79,77 @@ net = Net()
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
+#42.85
 # Training model on data
 start = time.time()
-for epoch in range(10):
+losses = []
+validation_losses = []
+validation_accuracy = []
+training_acuaracy = []
+for epoch in range(5):
     print("\nEpoch", epoch+1)
     running_loss = 0
+    net.train()
+    count = 0
     for i, (feats, labels) in enumerate(train_loader):
         if feats.shape[0] == batch_size:
             feats = feats.view([batch_size,1,input_length])
-
             optimizer.zero_grad()
-
             output = net(feats)
-
             loss = criterion(output, labels)
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
+
+            #calculate of epoch training accuracy
+            pred = torch.max(output, 1)[1]
+            for j, item in enumerate(pred):
+                count += int(item == labels[j])
             if i * batch_size % 10000 == 0:
                 print(i * batch_size, "/", len(train_loader) * batch_size, 
                     "\tLoss:", running_loss/(i*batch_size+1))
+    epoch_loss = running_loss / len(train_loader.dataset)
+    losses.append(epoch_loss)
+    training_acuaracy.append(count/len(train_loader.dataset))
 
+
+    net.eval()
+    valid_loss = 0.0
+    count = 0
+    for i, (feats, labels) in enumerate(test_loader):
+        feats = feats.view([batch_size,1,input_length])
+        output = net(feats)
+        valid_loss += criterion(output,labels).item()
+        pred = torch.max(output, 1)[1]
+        for j, item in enumerate(pred):
+            count += int(item == labels[j])
+    validation_accuracy.append(count/len(test_loader.dataset))
+    validation_losses.append(valid_loss/len(test_loader.dataset))
+
+#add in accuracy test graph
 print(round((time.time() - start), 2), "s")
 
+plt.figure(figsize=(10,5))
+plt.title("Validation Loss and Trainign Loss over Fully Connected NN")
+plt.plot(np.array(losses),label="Training loss")
+plt.plot(np.array(validation_losses),label="Validation loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.savefig("1DCNN_loss.png")
+
+plt.figure(figsize=(10,5))
+plt.title("Validation accuracy and Trainign accuracy over Fully Connected NN")
+plt.plot(np.array(training_acuaracy),label="Training accuracy")
+plt.plot(np.array(validation_accuracy),label="Validation accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.savefig("1DCNN_accuracy.png")
+
 # Testing model with test dataset
+
 with torch.no_grad():
     count = 0
     catagories = [[0,0],[0,0],[0,0],[0,0]]
@@ -108,6 +171,8 @@ with torch.no_grad():
     print(catagories)
     for i in range(num_classes):
         print(f"Acuracy of {i}: {catagories[i][0]/catagories[i][1]}")
+    
+
 
 # Saving/loading model
 PATH = './torch_conv100.nn'
