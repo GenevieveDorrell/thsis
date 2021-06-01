@@ -132,7 +132,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
                     rgbs[key].append(tiff_data[tiff][k][row2][col2])  
 
         #get surrounding data points
-        dir_vecs = gen_dir_vecs(2)       
+        dir_vecs = gen_dir_vecs(3)       
         
         
         for key in rgbs.keys():
@@ -198,7 +198,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
     balanced_data = numpy.array(balanced_data)
     b_test_lables = numpy.array(b_test_lables)
     b_test_data = numpy.array(b_test_data)
-    dif = "sev_2_"
+    dif = "everything_4_"
     if make_csvs:
         make_csv(dif + 'balanced-severity-y_test', b_test_lables)
         shape = b_test_data.shape
@@ -227,6 +227,7 @@ if __name__ == "__main__":
     stand_age = "data\\2013\stand_age_clip.tif"
     stand_age_80 = "data\\2013\stand_age_80.tif"
     stand_age_200 = "data\\2013\stand_age_200.tif"
+    aspect = "data\\2013\\aspect.tif"
 
     #file paths for bigger fire
     sev1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_20140706_dnbr6.tif"
@@ -249,7 +250,7 @@ if __name__ == "__main__":
     rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_refl.tif"
     #y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
 
-    get_numpy_from_tiffs([sev2_fp],[rgb2_fp],[treecover, lossyear, slope, elevation, stream_distance, stand_age, stand_age_80, stand_age_200],False)
+    get_numpy_from_tiffs([sev1_fp, sev2_fp, sev5_fp],[rgb1_fp, rgb2_fp, rgb5_fp],[treecover, lossyear, slope, elevation, aspect, stream_distance, stand_age, stand_age_80, stand_age_200],False)
     #get_numpy_from_tiffs([sev1_fp, sev2_fp],[rgb1_fp, rgb2_fp],[treecover, lossyear, slope],False)
     #select test set more randomly
 

@@ -1,5 +1,6 @@
 from os import error
 import time
+from matplotlib import colors
 import pandas as pd
 import numpy as np
 
@@ -24,6 +25,7 @@ y_test = pd.read_csv(dif + 'balanced-severity-y_test.csv',header=0)
 x_test = pd.DataFrame.to_numpy(x_test)
 y_test = pd.DataFrame.to_numpy(y_test.iloc[:,0])
 print(x_test.shape)
+print(x_train.shape)
 
 #global variables
 num_classes = 4
@@ -46,7 +48,7 @@ class Net(nn.Module):
         self.batch_size = batch_size
         # input [100, 1, 99], 10 output nodes, 3x3 kernel        
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(400, 1024)
+        self.fc1 = nn.Linear(425, 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 256)
         self.fc4 = nn.Linear(256, 128)
@@ -65,7 +67,7 @@ class Net(nn.Module):
 # Initializing model, loss function, and optimizer
 net = Net()
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
+optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 #42.85
 # Training model on data
@@ -118,25 +120,37 @@ for epoch in range(100):
 #add in accuracy test graph
 print(round((time.time() - start), 2), "s")
 
-plt.figure(figsize=(10,5))
-plt.title("Validation Loss and Trainign Loss over Fully Connected NN")
-plt.plot(np.array(losses),label="Training loss")
-plt.plot(np.array(validation_losses),label="Validation loss")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.legend()
+plt.figure(figsize=(20,10))
+plt.title("Validation and Training Loss of NN",fontsize=44)
+plt.plot(np.array(losses),label="Training Loss", color = 'mediumspringgreen',linewidth=4)
+plt.plot(np.array(validation_losses),label="Validation Loss", color = 'deepskyblue',linewidth=4)
+plt.xlabel("Epochs",fontsize=30)
+plt.ylabel("Loss",fontsize=30)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.rcParams["font.family"] = "cursive"
+plt.gca().tick_params(labelsize=24,width=2)
 plt.savefig("linear_loss.png")
 
-plt.figure(figsize=(10,5))
-plt.title("Validation accuracy and Trainign accuracy over Fully Connected NN")
-plt.plot(np.array(training_acuaracy),label="Training accuracy")
-plt.plot(np.array(validation_accuracy),label="Validation accuracy")
-plt.xlabel("Epochs")
-plt.ylabel("Accuracy")
-plt.legend()
+plt.figure(figsize=(20,10))
+plt.title("Validation and Training accuracy of NN",fontsize=44)
+plt.plot(np.array(training_acuaracy),label="Training Accuracy", color = 'mediumspringgreen',linewidth=4)
+plt.plot(np.array(validation_accuracy),label="Validation Accuracy", color = 'deepskyblue',linewidth=4)
+plt.xlabel("Epochs",fontsize=30)
+plt.ylabel("Accuracy",fontsize=30)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
 plt.savefig("linear_accuracy.png")
 # Testing model with test dataset
-
+y_true = []
+y_pred = []
 with torch.no_grad():
     count = 0
     catagories = [[0,0],[0,0],[0,0],[0,0]]
@@ -147,7 +161,8 @@ with torch.no_grad():
             test_out = net(test)
             pred = torch.max(test_out, 1)[1]
             for j, item in enumerate(pred):
-
+                y_true.append(labels[j])
+                y_pred.append(item)
                 count += int(item == labels[j])
                 catagories[item][0] += int(item == labels[j])
                 catagories[labels[j]][1] += 1
@@ -159,10 +174,21 @@ with torch.no_grad():
     for i in range(num_classes):
         print(f"Acuracy of {i}: {catagories[i][0]/catagories[i][1]}")
     
-
+# Confusion Matrix
+from sklearn.metrics import confusion_matrix
+print(confusion_matrix(y_true, y_pred))
+# Accuracy
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_true, y_pred))
+# Recall
+from sklearn.metrics import recall_score
+print(recall_score(y_true, y_pred, average=None))
+# Precision
+from sklearn.metrics import precision_score
+print(precision_score(y_true, y_pred, average=None))
 
 # Saving/loading model
-PATH = './torch_conv100.nn'
-torch.save(net.state_dict(), PATH)
+PATH = '100_epochs/torch_linear_sev_3.nn'
+#torch.save(net.state_dict(), PATH)
 net = Net()
 net.load_state_dict(torch.load(PATH))

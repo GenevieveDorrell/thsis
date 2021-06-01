@@ -1,49 +1,15 @@
+from numpy.lib.function_base import average
 import pandas as pd
 import numpy as np
 import time
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
-
-from geoProc_latlon import get_numpy_from_tiffs
-"""
-Logistic Regression score: 25.0%
-Decision Tree score: 26.08%
-Random Forest score: 27.25%
-"""
-"""
-#geo data
-lossyear = "data\\2013\Hansen_GFC2013_lossyear_50N_130W.tif"
-treecover = "data\\2013\Hansen_GFC-2019-v1.7_treecover2000_50N_130W.tif"
-elevation = "data\\2013\\USGS_13_n43w124.tif"
-slope = "data\\2013\slope2.tif"
-
-#file paths for bigger fire
-sev1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_20140706_dnbr6.tif"
-rgb1_fp = "data\\2013\or4273212351520130726\or4273212351520130726_20130703_l8_refl.tif"
-
-#file paths for smaller fire
-sev2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_20140706_dnbr6.tif"
-rgb2_fp = "data\\2013\or4285712358520130726\or4285712358520130726_20130703_l8_refl.tif"
-
-#mill fire
-sev3_fp = "data\\2017\or4293912360020170827\or4293912360020170827_20170714_20180717_dnbr6.tif"
-rgb3_fp = "data\\2017\or4293912360020170827\or4293912360020170827_20170714_l8_refl.tif"
-
-#big windy complex
-sev4_fp = "data\\2018\or4252812357120180715\or4252812357120180715_20180701_20190720_dnbr6.tif"
-rgb4_fp = "data\\2018\or4252812357120180715\or4252812357120180715_20180701_L8_refl.tif"
-
-#other fire
-sev5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_20140706_dnbr6.tif"
-rgb5_fp = "data\\2013\or4261412376020130726\or4261412376020130726_20130703_l8_refl.tif"
+import matplotlib.pyplot as plt
 
 
-y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp, sev2_fp, sev3_fp, sev4_fp, sev5_fp],[rgb1_fp, rgb2_fp, rgb3_fp, rgb4_fp, rgb5_fp], [treecover, lossyear, elevation, slope])
-#y_train, y_test, x_train, x_test = get_numpy_from_tiffs([sev1_fp],[rgb1_fp], [treecover])#, slope])
-"""
 #get data from csvs
-dif = "everything_2_"
+dif = "everything_3_"
 x_train = pd.read_csv(dif + 'balanced-severity-x_training.csv',header=0)
 y_train = pd.read_csv(dif + 'balanced-severity-y_training.csv',header=0)
 x_train = pd.DataFrame.to_numpy(x_train)
@@ -62,7 +28,7 @@ print(x_test.shape)
 input_length = x_train.shape[1]
 num_classes = 4
 
-
+"""
 #Logistic Regression
 regressor = LogisticRegression(max_iter=1000000000)
 regressor.fit(x_train, y_train)
@@ -76,14 +42,91 @@ dtree.fit(x_train, y_train)
 
 dt_score = round(dtree.score(x_test, y_test) * 100, 2)
 print(f"Decision Tree score: {dt_score}%")
-
+"""
 #Random Forest
 rf_class = RandomForestClassifier()
 rf_class.fit(x_train, y_train)
 
 rf_score = round(rf_class.score(x_test, y_test) * 100, 2)
 print(f"Random Forest score: {rf_score}%")
+importance = rf_class.feature_importances_
+# summarize feature importance
+num_features = 17
+averaged_importance = []
+for i in range(num_features):
+    averaged_importance.append(0)
+    for j in range(i,len(importance),num_features):
+        averaged_importance[i] += importance[j]
+    averaged_importance[i] /= 25
+# plot feature importance
+feature_names = ["Land Sat Channel 1","Land Sat Channel 2","Land Sat Channel 3","Land Sat Channel 4","Land Sat Channel 5",
+                    "Land Sat Channel 6", "Land Sat Channel 7", "Land Sat Channel 8", "Tree Cover", "Loss Year", "Slope", 
+                    "Elevation", "Aspect", "Stream Distance", "Stand Age", "Stand Age 80", "Stand Age 200"]
+
+pix_importance = []
+
+for i in range(25):
+    pix = 0
+    for j in range(17):
+        pix += importance[i*17 + j]
+    pix_importance.append(pix/17)
+
+pix_label = []
+for i in range(5):
+    for j in range(5):
+        pix_label.append(f"({i+1}, {j+1})")
+
+pix_label[13] = "Center Pixel"
 
 
 
+plt.figure(figsize=(20,10))
+plt.bar(feature_names, averaged_importance,color = 'mediumspringgreen')
+plt.title("Discriptive Feature Importance for RF",fontsize=44)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
+plt.xticks(rotation=45,horizontalalignment='right')
+plt.savefig("RF_feature_importance.png",bbox_inches="tight")
 
+plt.figure(figsize=(20,10))
+plt.bar([x for x in range(len(importance))], importance,color = 'deepskyblue')
+plt.title("All Feature Importance for RF",fontsize=44)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
+plt.xticks(rotation=45,horizontalalignment='right')
+plt.savefig("RF_all_feature_importance.png",bbox_inches="tight")
+
+print(len(pix_importance))
+plt.figure(figsize=(20,10))
+plt.bar(pix_label, pix_importance,color = 'green')
+plt.title("Pixel Importance for RF",fontsize=44)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
+plt.xticks(rotation=45,horizontalalignment='right')
+plt.savefig("RF_pixel_importance.png",bbox_inches="tight")
+
+y_pred = rf_class.predict(x_test)
+y_true = y_test
+from sklearn.metrics import confusion_matrix
+print(confusion_matrix(y_true, y_pred))
+# Accuracy
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_true, y_pred))
+# Recall
+from sklearn.metrics import recall_score
+print(recall_score(y_true, y_pred, average=None))
+# Precision
+from sklearn.metrics import precision_score
+print(precision_score(y_true, y_pred, average=None))

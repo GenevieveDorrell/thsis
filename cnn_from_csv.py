@@ -54,11 +54,12 @@ class Net(nn.Module):
         #nn.ConvTranspose1d(in_channels, out_channels, kernel_size)
         
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(3840, 1024)
-        self.fc2 = nn.Linear(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
-        self.fc4 = nn.Linear(256, 128)
-        self.fc5 = nn.Linear(128, num_classes)     # 4 output nodes #soft max
+        self.fc1 = nn.Linear(4080, 2048)
+        self.fc2 = nn.Linear(2048, 1024)
+        self.fc3 = nn.Linear(1024, 512)
+        self.fc4 = nn.Linear(512, 256)
+        self.fc5 = nn.Linear(256, 128)
+        self.fc6 = nn.Linear(128, num_classes)     # 4 output nodes #soft max
     
     def forward(self, x):
         # Max pooling over a (2, 2) window    
@@ -71,7 +72,8 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         x = F.relu(self.fc4(x))
-        x = F.softmax(self.fc5(x),dim=1)
+        x = F.relu(self.fc5(x))
+        x = F.softmax(self.fc6(x),dim=1)
         return x
 
 # Initializing model, loss function, and optimizer
@@ -86,7 +88,7 @@ losses = []
 validation_losses = []
 validation_accuracy = []
 training_acuaracy = []
-for epoch in range(5):
+for epoch in range(100):
     print("\nEpoch", epoch+1)
     running_loss = 0
     net.train()
@@ -130,26 +132,39 @@ for epoch in range(5):
 #add in accuracy test graph
 print(round((time.time() - start), 2), "s")
 
-plt.figure(figsize=(10,5))
-plt.title("Validation Loss and Trainign Loss over Fully Connected NN")
-plt.plot(np.array(losses),label="Training loss")
-plt.plot(np.array(validation_losses),label="Validation loss")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.legend()
+
+
+plt.figure(figsize=(20,10))
+plt.title("Validation and Trainign Loss of 1D CNN",fontsize=44)
+plt.plot(np.array(losses),label="Training Loss", color = 'mediumspringgreen',linewidth=4)
+plt.plot(np.array(validation_losses),label="Validation Loss", color = 'deepskyblue',linewidth=4)
+plt.xlabel("Epochs",fontsize=30)
+plt.ylabel("Loss",fontsize=30)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
 plt.savefig("1DCNN_loss.png")
 
-plt.figure(figsize=(10,5))
-plt.title("Validation accuracy and Trainign accuracy over Fully Connected NN")
-plt.plot(np.array(training_acuaracy),label="Training accuracy")
-plt.plot(np.array(validation_accuracy),label="Validation accuracy")
-plt.xlabel("Epochs")
-plt.ylabel("Accuracy")
-plt.legend()
+plt.figure(figsize=(20,10))
+plt.title("Validation and Trainign accuracy of 1D CNN",fontsize=44)
+plt.plot(np.array(training_acuaracy),label="Training Accuracy", color = 'mediumspringgreen',linewidth=4)
+plt.plot(np.array(validation_accuracy),label="Validation Accuracy", color = 'deepskyblue',linewidth=4)
+plt.xlabel("Epochs",fontsize=30)
+plt.ylabel("Accuracy",fontsize=30)
+plt.legend(fontsize=36,frameon=False)
+plt.gca().spines['right'].set_color('none')
+plt.gca().spines['top'].set_color('none')
+plt.gca().spines['left'].set_linewidth(3)
+plt.gca().spines['bottom'].set_linewidth(3)
+plt.gca().tick_params(labelsize=24,width=2)
 plt.savefig("1DCNN_accuracy.png")
 
 # Testing model with test dataset
-
+y_true = []
+y_pred = []
 with torch.no_grad():
     count = 0
     catagories = [[0,0],[0,0],[0,0],[0,0]]
@@ -160,7 +175,8 @@ with torch.no_grad():
             test_out = net(test)
             pred = torch.max(test_out, 1)[1]
             for j, item in enumerate(pred):
-
+                y_true.append(labels[j])
+                y_pred.append(item)
                 count += int(item == labels[j])
                 catagories[item][0] += int(item == labels[j])
                 catagories[labels[j]][1] += 1
@@ -172,10 +188,22 @@ with torch.no_grad():
     for i in range(num_classes):
         print(f"Acuracy of {i}: {catagories[i][0]/catagories[i][1]}")
     
+# Confusion Matrix
+from sklearn.metrics import confusion_matrix
+print(confusion_matrix(y_true, y_pred))
+# Accuracy
+from sklearn.metrics import accuracy_score
+print(accuracy_score(y_true, y_pred))
+# Recall
+from sklearn.metrics import recall_score
+print(recall_score(y_true, y_pred, average=None))
+# Precision
+from sklearn.metrics import precision_score
+print(precision_score(y_true, y_pred, average=None))
 
 
 # Saving/loading model
-PATH = './torch_conv100.nn'
+PATH = '100_epochs/torch_cnn.n'
 torch.save(net.state_dict(), PATH)
 net = Net()
 net.load_state_dict(torch.load(PATH))
