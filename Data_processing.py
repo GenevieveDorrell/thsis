@@ -6,8 +6,11 @@ from sklearn.preprocessing import normalize
 from pyproj import Transformer, CRS
 from random import randint, random, randrange
 import pandas as pd
+from math import floor
 
-num_test_casses = 500
+
+
+
 #open tiffs
 def open_tiffs(fps: List[str]):
     """
@@ -132,7 +135,8 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
                     rgbs[key].append(tiff_data[tiff][k][row2][col2])  
 
         #get surrounding data points
-        dir_vecs = gen_dir_vecs(3)       
+        number_layers = 4
+        dir_vecs = gen_dir_vecs(number_layers)       
         
         
         for key in rgbs.keys():
@@ -179,6 +183,8 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
     b_test_lables = []
     b_test_data = []
 
+    num_test_casses = floor((min_catagorie)/5)#20% of data set is test cases
+
     #create balanced dataset and testset
     num_in_catagories = min_catagorie - num_test_casses
     for key in catgories.keys():
@@ -202,7 +208,7 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
     if make_csvs:
         make_csv(dif + 'balanced-severity-y_test', b_test_lables)
         shape = b_test_data.shape
-        print(shape)
+        print(balanced_data.shape)
         b_test_data = b_test_data.reshape(num_test_casses*4,shape[1]*shape[2]*shape[3])#4 bc that is the number of catagories
         make_csv(dif + 'balanced-severity-x_test', b_test_data)
         make_csv(dif + 'balanced-severity-y_training', balanced_lables)

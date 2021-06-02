@@ -196,7 +196,7 @@ print(precision_score(y_true, y_pred, average=None))
 
 
 # Saving/loading model
-PATH = '100_epochs/torch_cnn.n'
+PATH = '100_epochs/torch_2D_cnn.n'
 torch.save(net.state_dict(), PATH)
 net = Net()
 net.load_state_dict(torch.load(PATH))

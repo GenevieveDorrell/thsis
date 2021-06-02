@@ -174,21 +174,23 @@ def get_numpy_from_tiffs(severity_fps: List[str], rgbs_fps: List[str],
 
     # find labble with smallest num of samples
     num_in_catagories = len(catgories[0])
-    print(f"Num in each catoroie {min_catagorie}")
+    print(f"Num in each catoroie {num_in_catagories}")
     for key in catgories.keys():
         in_catagorie =  len(catgories[key])
-        if in_catagorie < min_catagorie:
-            min_catagorie = in_catagorie
+        if in_catagorie < num_in_catagories:
+            num_in_catagories = in_catagorie
     
     balanced_lables = []
     balanced_data = []
     for key in catgories.keys():
         balanced_lables += [key]*num_in_catagories
-        balanced_data += catgories[key]
+        balanced_data += catgories[key][:num_in_catagories]
 
     balanced_lables = numpy.array(balanced_lables)
     balanced_data = numpy.array(balanced_data)
-    dif = "fire_2017_"
+    dif = "fire_2017_L3"
+    shape = balanced_data.shape
+    print(shape)
     if make_csvs:
         make_csv(dif + 'balanced-severity-y_training', balanced_lables)
         balanced_data = balanced_data.reshape(num_in_catagories*4,shape[1]*shape[2]*shape[3])

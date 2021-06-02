@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 5 epochs = 37.5
 """
 #get data from csvs
-dif = "everything_2_"
+dif = "everything_3_"
 x_train = pd.read_csv(dif + 'balanced-severity-x_training.csv',header=0)
 y_train = pd.read_csv(dif + 'balanced-severity-y_training.csv',header=0)
 x_train = pd.DataFrame.to_numpy(x_train)
@@ -50,11 +50,12 @@ class Net(nn.Module):
         
         self.conv2 = nn.Conv1d(20, 40, 3)
         self.conv3 = nn.Conv1d(40, 80, 3)
+        self.conv4 = nn.Conv1d(80, 160, 3)
         self.norm2 = nn.BatchNorm1d(40)
         #nn.ConvTranspose1d(in_channels, out_channels, kernel_size)
         
         # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(4080, 2048)
+        self.fc1 = nn.Linear(8000, 2048)
         self.fc2 = nn.Linear(2048, 1024)
         self.fc3 = nn.Linear(1024, 512)
         self.fc4 = nn.Linear(512, 256)
@@ -67,6 +68,7 @@ class Net(nn.Module):
         x = F.max_pool1d(F.relu(self.conv1(x)), 2)
         x = F.max_pool1d(F.relu(self.conv2(x)), 2)
         x = F.max_pool1d(F.relu(self.conv3(x)), 2)
+        x = F.max_pool1d(F.relu(self.conv4(x)), 2)
         x = x.view(self.batch_size, -1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -120,12 +122,13 @@ for epoch in range(100):
     valid_loss = 0.0
     count = 0
     for i, (feats, labels) in enumerate(test_loader):
-        feats = feats.view([batch_size,1,input_length])
-        output = net(feats)
-        valid_loss += criterion(output,labels).item()
-        pred = torch.max(output, 1)[1]
-        for j, item in enumerate(pred):
-            count += int(item == labels[j])
+        if feats.shape[0] == batch_size:
+            feats = feats.view([batch_size,1,input_length])
+            output = net(feats)
+            valid_loss += criterion(output,labels).item()
+            pred = torch.max(output, 1)[1]
+            for j, item in enumerate(pred):
+                count += int(item == labels[j])
     validation_accuracy.append(count/len(test_loader.dataset))
     validation_losses.append(valid_loss/len(test_loader.dataset))
 
@@ -146,7 +149,7 @@ plt.gca().spines['top'].set_color('none')
 plt.gca().spines['left'].set_linewidth(3)
 plt.gca().spines['bottom'].set_linewidth(3)
 plt.gca().tick_params(labelsize=24,width=2)
-plt.savefig("1DCNN_loss.png")
+plt.savefig("1DCNN_loss_3L.png")
 
 plt.figure(figsize=(20,10))
 plt.title("Validation and Trainign accuracy of 1D CNN",fontsize=44)
@@ -160,7 +163,7 @@ plt.gca().spines['top'].set_color('none')
 plt.gca().spines['left'].set_linewidth(3)
 plt.gca().spines['bottom'].set_linewidth(3)
 plt.gca().tick_params(labelsize=24,width=2)
-plt.savefig("1DCNN_accuracy.png")
+plt.savefig("1DCNN_accuracy_3L.png")
 
 # Testing model with test dataset
 y_true = []
@@ -203,7 +206,7 @@ print(precision_score(y_true, y_pred, average=None))
 
 
 # Saving/loading model
-PATH = '100_epochs/torch_cnn.n'
+PATH = '100_epochs/torch_L3_cnn.nn'
 torch.save(net.state_dict(), PATH)
 net = Net()
 net.load_state_dict(torch.load(PATH))

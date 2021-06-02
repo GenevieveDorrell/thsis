@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 
 #get data from csvs
-dif = "everything_3_"
+dif = "everything_2_"
 x_train = pd.read_csv(dif + 'balanced-severity-x_training.csv',header=0)
 y_train = pd.read_csv(dif + 'balanced-severity-y_training.csv',header=0)
 x_train = pd.DataFrame.to_numpy(x_train)
@@ -43,6 +43,7 @@ dtree.fit(x_train, y_train)
 dt_score = round(dtree.score(x_test, y_test) * 100, 2)
 print(f"Decision Tree score: {dt_score}%")
 """
+
 #Random Forest
 rf_class = RandomForestClassifier()
 rf_class.fit(x_train, y_train)
